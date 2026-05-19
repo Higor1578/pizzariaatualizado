@@ -270,7 +270,6 @@ function switchTab(name){
   render();
 }
 function render(){
-  
   updateHeader();
   const c=document.getElementById('content');
   if(currentTab==='pedidos')   c.innerHTML=renderPedidos();
@@ -278,6 +277,27 @@ function render(){
   if(currentTab==='dashboard') c.innerHTML=renderDashboard();
   if(currentTab==='config')    c.innerHTML=renderConfig();
   bindEvents();
+  restoreBtState();
+}
+
+function restoreBtState(){
+  const bc=document.getElementById('btn-bt-connect');
+  const bd=document.getElementById('btn-bt-disconnect');
+  const sm=document.getElementById('bt-status-msg');
+  if(!bc||!bd) return;
+  if(btChar){
+    bc.style.display='none';
+    bd.style.display='';
+    if(sm){
+      sm.textContent='Conectada: '+(btDevice&&btDevice.name?btDevice.name:'Impressora');
+      sm.className='bt-status bt-ok';
+      sm.style.display='';
+    }
+  } else {
+    bc.style.display='';
+    bd.style.display='none';
+    if(sm) sm.style.display='none';
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -464,12 +484,20 @@ async function conectarBT(){
     setBtStatus('Conectada: '+(btDevice.name||'Impressora'),'ok');
     document.getElementById('btn-bt-connect').style.display='none';
     document.getElementById('btn-bt-disconnect').style.display='';
-    btDevice.addEventListener('gattserverdisconnected',()=>{
-      btChar=null;
-      setBtStatus('Impressora desconectada.','err');
-      const bc=document.getElementById('btn-bt-connect');
-      const bd=document.getElementById('btn-bt-disconnect');
-      if(bc)bc.style.display=''; if(bd)bd.style.display='none';
+    btDevice.addEventListener('gattserverdisconnected', async ()=>{
+      // Tenta reconectar automaticamente antes de declarar desconectada
+      setBtStatus('Reconectando...','wait');
+      try {
+        const srv = await btDevice.gatt.connect();
+        const svc = await srv.getPrimaryService(PRINT_SERVICE);
+        btChar = await svc.getCharacteristic(PRINT_CHAR);
+        setBtStatus('Reconectada: '+(btDevice.name||'Impressora'),'ok');
+        restoreBtState();
+      } catch(e) {
+        btChar=null;
+        setBtStatus('Impressora desconectada.','err');
+        restoreBtState();
+      }
     });
   }catch(e){btChar=null;setBtStatus('Erro: '+(e.message||'conexao cancelada'),'err')}
 }
@@ -499,9 +527,14 @@ async function imprimirBT(o){
 
 // ─── HANDLE PRINT: tenta BT, cai no browser ───
 async function handlePrint(orderOrId){
-  // aceita tanto o objeto quanto o id
-  let o = typeof orderOrId==='object' ? orderOrId : ORDERS.find(x=>String(x.id)===String(orderOrId));
-  if(!o){showToast('Pedido nao encontrado.');return}
+  let o;
+  if(typeof orderOrId==='object' && orderOrId!==null){
+    o=orderOrId;
+  } else {
+    const sid=String(orderOrId);
+    o=ORDERS.find(x=>String(x.id)===sid);
+  }
+  if(!o){console.warn('Pedido nao encontrado para impressao:',orderOrId);showToast('Pedido nao encontrado.');return;}
   if(btChar) await imprimirBT(o);
   else printBrowser(o);
 }
@@ -541,12 +574,12 @@ const SL={novo:'Novo',preparando:'Preparando',entregue:'Entregue',cancelado:'Can
 
 function renderPedidos(){
   const list=filtro==='hoje'?ORDERS.filter(o=>o.data===todayISO()):ORDERS;
-  const sorted=[...list].sort((a,b)=>b.id-a.id);
+  const sorted=[...list].sort((a,b)=>String(b.id).localeCompare(String(a.id)));
 
   let html=renderBTPanel();
   html+=`<div class="flex-between" style="margin-bottom:12px">
     <h2 style="font-size:17px;color:var(--red)">Pedidos</h2>
-    <select onchange="filtro=this.value;render()" style="width:auto;padding:7px 10px;font-size:12px">
+    <select id="sel-filtro" style="width:auto;padding:7px 10px;font-size:12px">
       <option value="hoje" ${filtro==='hoje'?'selected':''}>Hoje</option>
       <option value="todos" ${filtro==='todos'?'selected':''}>Todos</option>
     </select>
@@ -559,9 +592,10 @@ function renderPedidos(){
     </div>`;
   }else{
     sorted.forEach(o=>{
+      const sid=String(o.id);
       const itensTxt=(o.itens||[]).map(i=>`${i.qty}x ${i.name}`).join(', ');
       const dataBR=(o.data||'').split('-').reverse().join('/');
-      html+=`<div class="order-card ${o.status==='novo'?'novo':''}" id="ocard-${o.id}">
+      html+=`<div class="order-card ${o.status==='novo'?'novo':''}" data-oid="${sid}">
         <div class="flex-between">
           <div>
             <span style="font-weight:700;font-size:15px">#${esc(o.numero)}</span>
@@ -574,14 +608,13 @@ function renderPedidos(){
         <div style="font-size:11px;color:#777;margin-top:3px">${esc(o.pagamento||'')}${o.troco?' &bull; troco p/ '+esc(o.troco):''}</div>
         <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:5px">
           ${['novo','preparando','entregue','cancelado'].map(s=>`
-            <button class="chip" onclick="changeStatus(${js(o.id)},'${s}')"
+            <button class="chip status-btn" data-oid="${sid}" data-status="${s}"
               style="border-color:${o.status===s?SC[s]:'#333'};background:${o.status===s?SC[s]+'33':'transparent'};color:${o.status===s?SC[s]:'#666'}">
               ${SL[s]}
             </button>`).join('')}
-          <button class="btn ${btChar?'btn-blue':'btn-dark'}"
-            onclick="handlePrint(${js(o.id)})"
+          <button class="btn btn-dark print-btn" data-oid="${sid}"
             style="margin-left:auto;padding:5px 14px;font-size:12px;font-weight:700">
-            🖨️ ${btChar?'Bluetooth':'Imprimir'}
+            🖨️ Imprimir
           </button>
         </div>
       </div>`;
@@ -591,10 +624,16 @@ function renderPedidos(){
 }
 
 async function changeStatus(id,status){
-  const o=ORDERS.find(x=>String(x.id)===String(id));
-  if(!o)return;
-  o.status=status;saveOrders();render();
-  if(db){const {error}=await db.from('orders').update({status}).eq('id',id);if(error)console.error(error)}
+  const sid=String(id);
+  const o=ORDERS.find(x=>String(x.id)===sid);
+  if(!o){console.warn('Pedido nao encontrado:',sid);return;}
+  o.status=status;
+  saveOrders();
+  render();
+  if(db){
+    const {error}=await db.from('orders').update({status}).eq('id',id);
+    if(error)console.error('Erro ao atualizar status:',error);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -935,10 +974,41 @@ async function clearOld(){
 //  BIND EVENTS
 // ═══════════════════════════════════════════════
 function bindEvents(){
+  // Campos do novo pedido
   const bind=(id,key)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{novoState[key]=e.target.value})};
   bind('n-cliente','cliente');bind('n-telefone','telefone');bind('n-endereco','endereco');
   bind('n-bairro','bairroId');bind('n-obs','obs');bind('n-troco','troco');
   bind('n-qty','qty');bind('n-produto','produtoSel');
+
+  // Filtro de pedidos
+  const selFiltro=document.getElementById('sel-filtro');
+  if(selFiltro) selFiltro.addEventListener('change',e=>{filtro=e.target.value;render();});
+
+  // Event delegation para botões de status e imprimir
+  const content=document.getElementById('content');
+  if(content){
+    // Remove listener antigo para não duplicar
+    content.removeEventListener('click', contentClickHandler);
+    content.addEventListener('click', contentClickHandler);
+  }
+}
+
+function contentClickHandler(e){
+  // Botão de status
+  const statusBtn=e.target.closest('.status-btn');
+  if(statusBtn){
+    const oid=statusBtn.dataset.oid;
+    const status=statusBtn.dataset.status;
+    if(oid && status) changeStatus(oid, status);
+    return;
+  }
+  // Botão imprimir
+  const printBtn=e.target.closest('.print-btn');
+  if(printBtn){
+    const oid=printBtn.dataset.oid;
+    if(oid) handlePrint(oid);
+    return;
+  }
 }
 
 // ═══════════════════════════════════════════════
