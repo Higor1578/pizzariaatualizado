@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#8B0000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LCDPizza">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Painel de pedidos La Casa da Pizza">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>La Casa da Pizza</title>
+<style>
+:root {
+  --red:    #c0392b;
+  --dkred:  #8B0000;
+  --orange: #e67e22;
+  --green:  #27ae60;
+  --blue:   #3498db;
+  --bg:     #0f0f0f;
+  --bg2:    #161616;
+  --bg3:    #1a1a1a;
+  --bg4:    #1e1e1e;
+  --border: #2a2a2a;
+  --text:   #f5f0e8;
+  --muted:  #aaaaaa;
+  --dim:    #666666;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+#header{
+  background:linear-gradient(135deg,var(--dkred),var(--red));
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 20px rgba(139,0,0,.5);flex-shrink:0;
+  padding-top:max(12px,env(safe-area-inset-top));
+}
+#header h1{font-size:18px;font-weight:700;color:#fff}
+#header p{font-size:10px;color:rgba(255,255,255,.7);letter-spacing:1.5px;margin-top:2px}
+.badge{background:var(--orange);color:#fff;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700}
+
+/* ── TABS ── */
+#tabs{display:flex;background:#111;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tab-btn{padding:11px 16px;border:none;background:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:.2s;letter-spacing:.5px}
+.tab-btn.active{color:var(--red);border-bottom-color:var(--red)}
+
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:14px;padding-bottom:max(20px,env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+.card-title{font-size:10px;color:var(--red);letter-spacing:2px;font-weight:700;margin-bottom:12px;text-transform:uppercase}
+
+/* ── FORM ELEMENTS ── */
+input,select,textarea{
+  width:100%;background:var(--bg4);border:1px solid #333;border-radius:8px;
+  padding:10px 12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;
+  transition:border-color .2s;box-sizing:border-box;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--red)}
+input::placeholder,textarea::placeholder{color:#555}
+select option{background:var(--bg4)}
+textarea{resize:vertical}
+
+/* ── BUTTONS ── */
+.btn{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:.2s;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#a93226}
+.btn-green{background:var(--green);color:#fff}
+.btn-dark{background:#2a2a2a;color:var(--muted);border:1px solid #3a3a3a}
+.btn-dark:hover{background:#333}
+.btn-blue{background:#1565c0;color:#fff}
+.btn-full{width:100%;padding:14px;font-size:15px;border-radius:10px}
+
+/* ── STATUS CHIPS ── */
+.chip{padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s}
+
+/* ── ORDER CARD ── */
+.order-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px;transition:.2s}
+.order-card.novo{background:#1e1000;border-color:var(--orange)}
+
+/* ── GRID ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row{display:flex;gap:8px;align-items:center}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:linear-gradient(135deg,var(--orange),#f39c12);
+  padding:14px;text-align:center;font-weight:700;font-size:14px;
+  transform:translateY(-100%);transition:transform .3s;
+}
+#toast.show{transform:translateY(0)}
+
+/* ── INSTALL BANNER ── */
+#install-banner{
+  background:linear-gradient(135deg,#0d3b6e,#1565c0);
+  padding:12px 16px;display:none;align-items:center;gap:10px;flex-shrink:0;
+}
+#install-banner.visible{display:flex}
+#install-banner p{flex:1;font-size:12px;color:#fff;line-height:1.4}
+#install-banner strong{font-size:13px;display:block}
+
+/* LOGIN */
+#login-screen{
+  position:fixed;inset:0;z-index:10000;background:var(--bg);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.login-box{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px}
+.login-box h2{font-size:20px;color:#fff;margin-bottom:4px}
+.login-box p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.4}
+.login-error{display:none;color:#e74c3c;font-size:12px;margin-top:10px}
+
+/* ── STAT CARDS ── */
+.stat-card{background:var(--bg3);border-radius:12px;padding:14px;flex:1;min-width:130px;border:1px solid var(--border)}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:700}
+.stat-sub{font-size:10px;color:var(--dim);margin-top:3px}
+
+/* ── ITEM LIST ── */
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #222;font-size:13px}
+.item-row:last-child{border-bottom:none}
+
+/* ── BT STATUS ── */
+.bt-status{font-size:12px;padding:6px 10px;border-radius:6px;margin-top:8px}
+.bt-ok   {background:#0a2a0a;color:var(--green);border:1px solid #27ae6033}
+.bt-err  {background:#2a0a0a;color:#e74c3c;    border:1px solid #e74c3c33}
+.bt-wait {background:#0a0a2a;color:var(--blue); border:1px solid #3498db33}
+
+/* ── PRINT IFRAME ── */
+#print-frame{position:fixed;top:-9999px;left:-9999px;width:80mm;height:0;border:none}
+
+/* ── SCROLLBAR ── */
+#content::-webkit-scrollbar{width:4px}
+#content::-webkit-scrollbar-track{background:transparent}
+#content::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast">&#127829; NOVO PEDIDO CHEGOU! Verifique a lista.</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <form class="login-box" onsubmit="handleLogin(event)">
+    <h2>La Casa da Pizza</h2>
+    <p>Entre para acessar o painel administrativo.</p>
+    <input id="login-email" type="email" autocomplete="email" placeholder="E-mail" required style="margin-bottom:10px">
+    <input id="login-password" type="password" autocomplete="current-password" placeholder="Senha" required style="margin-bottom:12px">
+    <button id="btn-login" class="btn btn-full btn-red" type="submit">Entrar</button>
+    <div id="login-error" class="login-error"></div>
+  </form>
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <div>&#128187;</div>
+  <p><strong>Instalar o app</strong>Adicione na tela inicial para usar sem internet</p>
+  <button class="btn btn-green" id="btn-install" style="white-space:nowrap;flex-shrink:0">Instalar</button>
+  <button class="btn btn-dark" id="btn-install-close" style="padding:8px 10px;flex-shrink:0">X</button>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <h1>&#127829; La Casa da Pizza</h1>
+    <p>PAINEL DE PEDIDOS</p>
+  </div>
+  <div class="row" style="gap:8px">
+    <span id="novos-badge" class="badge" style="display:none"></span>
+    <span id="header-date" style="font-size:11px;color:rgba(255,255,255,.7)"></span>
+    <button id="btn-logout" class="btn btn-dark" onclick="handleLogout()" style="display:none;padding:6px 10px;font-size:11px;color:#fff">Sair</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div id="tabs">
+  <button class="tab-btn active" onclick="switchTab('pedidos')">&#128203; Pedidos</button>
+  <button class="tab-btn" onclick="switchTab('novo')">&#128221; Novo</button>
+  <button class="tab-btn" onclick="switchTab('dashboard')">&#128202; Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('config')">&#9881;&#65039; Config</button>
+</div>
+
+<!-- CONTENT -->
+<div id="content"></div>
+
+<!-- PRINT IFRAME -->
+<iframe id="print-frame"></iframe>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  STORAGE / SUPABASE
+// ═══════════════════════════════════════════════
+const SK_ORDERS   = 'lcdp_orders';
+const SK_PRODUCTS = 'lcdp_products';
+const SK_BAIRROS  = 'lcdp_bairros';
+
+// Preencha com os dados do seu projeto Supabase:
+// Supabase > Project Settings > API > Project URL e anon public key.
+const SUPABASE_URL = 'https://kmjbulbsgiptzvhhweau.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_DqoB81h8n1YjjT6rZpEo1Q_dadcornK';
+
+const hasSupabaseConfig =
+  SUPABASE_URL.startsWith('https://') &&
+  SUPABASE_ANON_KEY.length > 40 &&
+  window.supabase;
+
+const db = hasSupabaseConfig
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let authUser=null;
+let realtimeChannel=null;
+
+const defaultProducts = [
+  {id:1,name:'Pizza Calabresa P',  price:25, category:'Pizza'},
+  {id:2,name:'Pizza Calabresa M',  price:35, category:'Pizza'},
+  {id:3,name:'Pizza Calabresa G',  price:45, category:'Pizza'},
+  {id:4,name:'Pizza Margherita M', price:38, category:'Pizza'},
+  {id:5,name:'Pizza Portuguesa G', price:48, category:'Pizza'},
+  {id:6,name:'Pizza Frango G',     price:45, category:'Pizza'},
+  {id:7,name:'Refrigerante Lata',  price: 6, category:'Bebida'},
+  {id:8,name:'Refrigerante 1L',    price:10, category:'Bebida'},
+];
+const defaultBairros = [
+  {id:1,name:'Centro',         taxa:5},
+  {id:2,name:'Residencial Sul',taxa:5},
+  {id:3,name:'Jardim America', taxa:8},
+  {id:4,name:'Santos Dumont',  taxa:8},
+  {id:5,name:'Ibituruna',      taxa:10},
+];
+
+function load(key, def){ try{const v=localStorage.getItem(key);return v?JSON.parse(v):def}catch{return def} }
+function save(key,val){ try{localStorage.setItem(key,JSON.stringify(val))}catch{} }
+
+let ORDERS   = load(SK_ORDERS,   []);
+let PRODUCTS = load(SK_PRODUCTS, defaultProducts);
+let BAIRROS  = load(SK_BAIRROS,  defaultBairros);
+
+function saveOrders()  { save(SK_ORDERS,   ORDERS);   }
+function saveProducts(){ save(SK_PRODUCTS, PRODUCTS); }
+function saveBairros() { save(SK_BAIRROS,  BAIRROS);  }
+
+function setAuthUI(loggedIn){
+  const login=document.getElementById('login-screen');
+  const header=document.getElementById('header');
+  const tabs=document.getElementById('tabs');
+  const content=document.getElementById('content');
+  const logout=document.getElementById('btn-logout');
+  if(login)login.style.display=loggedIn?'none':'flex';
+  if(header)header.style.display=loggedIn?'flex':'none';
+  if(tabs)tabs.style.display=loggedIn?'flex':'none';
+  if(content)content.style.display=loggedIn?'block':'none';
+  if(logout)logout.style.display=loggedIn?'':'none';
+}
+
+function setLoginError(msg){
+  const el=document.getElementById('login-error');
+  if(!el)return;
+  el.textContent=msg||'';
+  el.style.display=msg?'block':'none';
+}
+
+async function handleLogin(e){
+  e.preventDefault();
+  if(!db){
+    setLoginError('Configure o Supabase antes de entrar.');
+    return;
+  }
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const btn=document.getElementById('btn-login');
+  setLoginError('');
+  if(btn){btn.disabled=true;btn.textContent='Entrando...';}
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(btn){btn.disabled=false;btn.textContent='Entrar';}
+  if(error){
+    setLoginError('E-mail ou senha invalidos.');
+    return;
+  }
+  authUser=data.user;
+  await startAdmin();
+}
+
+async function handleLogout(){
+  if(db) await db.auth.signOut();
+  if(realtimeChannel){
+    try{await db.removeChannel(realtimeChannel);}catch(e){}
+    realtimeChannel=null;
+  }
+  authUser=null;
+  ORDERS=[];PRODUCTS=[];BAIRROS=[];
+  setAuthUI(false);
+  setLoginError('');
+}
+
+function normalizeOrder(row){
+  return {
+    ...row,
+    subtotal:Number(row.subtotal||0),
+    taxa:Number(row.taxa||0),
+    total:Number(row.total||0),
+    itens:(row.order_items||row.itens||[]).map(i=>({
+      id:i.product_id||i.id,
+      itemId:i.id,
+      name:i.name,
+      qty:Number(i.qty||0),
+      price:Number(i.price||0)
+    }))
+  };
+}
+
+async function loadSupabaseData(){
+  if(!db||!authUser) return;
+  try{
+    const [productsRes,bairrosRes,ordersRes]=await Promise.all([
+      db.from('products').select('*').eq('active',true).order('category').order('name'),
+      db.from('bairros').select('*').eq('active',true).order('name'),
+      db.from('orders').select('*,order_items(*)').order('created_at',{ascending:false})
+    ]);
+    if(productsRes.error) throw productsRes.error;
+    if(bairrosRes.error) throw bairrosRes.error;
+    if(ordersRes.error) throw ordersRes.error;
+    PRODUCTS=(productsRes.data||[]).map(p=>({...p,price:Number(p.price||0)}));
+    BAIRROS=(bairrosRes.data||[]).map(b=>({...b,taxa:Number(b.taxa||0)}));
+    ORDERS=(ordersRes.data||[]).map(normalizeOrder);
+    prevOrderCount=ORDERS.length;
+    saveProducts();saveBairros();saveOrders();
+  }catch(e){
+    showToast('Supabase indisponivel. Usando dados locais.');
+    console.error(e);
+  }
+}
+
+async function refreshOrdersFromSupabase(showNewAlert=false){
+  if(!db||!authUser) return;
+  const oldCount=ORDERS.length;
+  const {data,error}=await db.from('orders').select('*,order_items(*)').order('created_at',{ascending:false});
+  if(error){console.error(error);return;}
+  ORDERS=(data||[]).map(normalizeOrder);
+  prevOrderCount=ORDERS.length;
+  saveOrders();
+  if(showNewAlert && ORDERS.length>oldCount){
+    showToast('NOVO PEDIDO CHEGOU!');
+    playAlert();
+  }
+  if(currentTab==='pedidos')render();
+  else updateHeader();
+}
+
+// ═══════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════
+const fmt    = n => 'R$ ' + Number(n).toFixed(2).replace('.',',');
+const todayISO = () => new Date().toISOString().slice(0,10);
+const nowStr   = () => new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const todayStr = () => new Date().toLocaleDateString('pt-BR');
+const esc      = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const js       = v => JSON.stringify(String(v));
+
+let currentTab = 'pedidos';
+let prevOrderCount = ORDERS.length;
+
+// ═══════════════════════════════════════════════
+//  AUDIO ALERT
+// ═══════════════════════════════════════════════
+function playAlert(){
+  try{
+    const AC = window.AudioContext||window.webkitAudioContext;
+    if(!AC) return;
+    const ctx=new AC(), notes=[523,659,784,1047];
+    notes.forEach((freq,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=freq;o.type='sine';
+      const t=ctx.currentTime+i*.12;
+      g.gain.setValueAtTime(.3,t);
+      g.gain.exponentialRampToValueAtTime(.001,t+.2);
+      o.start(t);o.stop(t+.25);
+    });
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),4000);
+}
+
+// ═══════════════════════════════════════════════
+//  HEADER UPDATE
+// ═══════════════════════════════════════════════
+function updateHeader(){
+  document.getElementById('header-date').textContent=todayStr();
+  const novos=ORDERS.filter(o=>o.data===todayISO()&&o.status==='novo').length;
+  const b=document.getElementById('novos-badge');
+  if(novos>0){b.textContent=novos+' novo'+(novos>1?'s':'');b.style.display=''}
+  else b.style.display='none';
+  // update tab label
+  document.querySelectorAll('.tab-btn')[0].textContent=
+    '📋 Pedidos'+(novos>0?' ('+novos+')':'');
+}
+
+// ═══════════════════════════════════════════════
+//  TAB SWITCH
+// ═══════════════════════════════════════════════
+function switchTab(name){
+  currentTab=name;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const names=['pedidos','novo','dashboard','config'];
+    b.classList.toggle('active',names[i]===name);
+  });
+  render();
+}
+
+function render(){
+  if(db&&!authUser)return;
+  updateHeader();
+  const c=document.getElementById('content');
+  if(currentTab==='pedidos')   c.innerHTML=renderPedidos();
+  if(currentTab==='novo')      c.innerHTML=renderNovo();
+  if(currentTab==='dashboard') c.innerHTML=renderDashboard();
+  if(currentTab==='config')    c.innerHTML=renderConfig();
+  bindEvents();
+}
+
+// ═══════════════════════════════════════════════
+//  BLUETOOTH
+// ═══════════════════════════════════════════════
+const PRINT_SERVICE = '000018f0-0000-1000-8000-00805f9b34fb';
+const PRINT_CHAR    = '00002af1-0000-1000-8000-00805f9b34fb';
+let btDevice=null, btChar=null;
+
+function toBytes(str){
+  const a=new Uint8Array(str.length);
+  for(let i=0;i<str.length;i++) a[i]=str.charCodeAt(i)&0xff;
+  return a;
+}
+
+function buildEscPos(o){
+  const E='\x1b',G='\x1d';
+  const INIT=E+'@',BON=E+'E\x01',BOFF=E+'E\x00';
+  const CEN=E+'a\x01',LEFT=E+'a\x00';
+  const FLG=G+'!\x11',FNM=G+'!\x00',CUT=G+'V\x41\x03',LF='\n';
+  const LINE='-'.repeat(32)+LF;
+  const pad=(a,b,w=32)=>a+' '.repeat(Math.max(1,w-a.length-b.length))+b;
+  let buf='';
+  buf+=INIT;
+  buf+=CEN+BON+FLG+'LA CASA DA PIZZA'+LF+FNM+BOFF;
+  buf+=CEN+'PEDIDO #'+o.numero+LF;
+  buf+=CEN+(o.data||'').split('-').reverse().join('/')+' '+o.hora+LF;
+  buf+=LEFT+LINE;
+  buf+='Endereco: '+o.endereco+LF+'Bairro:   '+o.bairro+LF;
+  buf+=LINE+BON+'ITENS:'+BOFF+LF;
+  (o.itens||[]).forEach(i=>{
+    buf+=pad(String(i.qty)+'x '+i.name.substring(0,18),'R$'+(i.price*i.qty).toFixed(2))+LF;
+  });
+  buf+=LINE;
+  buf+=pad('Subtotal','R$'+Number(o.subtotal||0).toFixed(2))+LF;
+  buf+=pad('Taxa entrega','R$'+Number(o.taxa||0).toFixed(2))+LF+LINE;
+  buf+=BON+pad('TOTAL','R$'+Number(o.total||0).toFixed(2))+BOFF+LF+LINE;
+  buf+='Pagamento: '+(o.pagamento||'')+LF;
+  if(o.troco) buf+='Troco para: '+o.troco+LF;
+  if(o.obs)   buf+='Obs: '+o.obs+LF;
+  buf+=LINE+CEN+'Obrigado pela preferencia!'+LF+LF+LF+LF+CUT;
+  return toBytes(buf);
+}
+
+function setBtStatus(msg, type){
+  const el=document.getElementById('bt-status-msg');
+  if(!el)return;
+  el.textContent=msg;
+  el.className='bt-status '+({'ok':'bt-ok','err':'bt-err','wait':'bt-wait'}[type]||'bt-wait');
+  el.style.display=msg?'':'none';
+}
+
+async function conectarBT(){
+  if(!navigator.bluetooth){
+    setBtStatus('Web Bluetooth nao suportado. Use Chrome no Windows/Android.','err');
+    return;
+  }
+  try{
+    setBtStatus('Abrindo seletor...','wait');
+    btDevice=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true,optionalServices:[PRINT_SERVICE]
+    });
+    setBtStatus('Conectando em '+(btDevice.name||'impressora')+'...','wait');
+    const srv=await btDevice.gatt.connect();
+    const svc=await srv.getPrimaryService(PRINT_SERVICE);
+    btChar=await svc.getCharacteristic(PRINT_CHAR);
+    setBtStatus('Conectada: '+(btDevice.name||'Impressora'),'ok');
+    document.getElementById('btn-bt-connect').style.display='none';
+    document.getElementById('btn-bt-disconnect').style.display='';
+    btDevice.addEventListener('gattserverdisconnected',()=>{
+      btChar=null;
+      setBtStatus('Impressora desconectada.','err');
+      document.getElementById('btn-bt-connect').style.display='';
+      document.getElementById('btn-bt-disconnect').style.display='none';
+    });
+  }catch(e){
+    btChar=null;
+    setBtStatus('Erro: '+(e.message||'conexao cancelada'),'err');
+  }
+}
+
+function desconectarBT(){
+  try{if(btDevice?.gatt?.connected)btDevice.gatt.disconnect();}catch{}
+  btChar=null;btDevice=null;
+  setBtStatus('','ok');
+  const bc=document.getElementById('btn-bt-connect');
+  const bd=document.getElementById('btn-bt-disconnect');
+  if(bc)bc.style.display='';
+  if(bd)bd.style.display='none';
+}
+
+async function imprimirBT(o){
+  if(!btChar){setBtStatus('Impressora nao conectada.','err');return false;}
+  try{
+    setBtStatus('Enviando...','wait');
+    const data=buildEscPos(o),CHUNK=512;
+    for(let i=0;i<data.length;i+=CHUNK){
+      await btChar.writeValue(data.slice(i,i+CHUNK));
+      await new Promise(r=>setTimeout(r,60));
+    }
+    setBtStatus('Impresso com sucesso!','ok');
+    return true;
+  }catch(e){
+    setBtStatus('Erro: '+(e.message||''),'err');
+    return false;
+  }
+}
+
+function printBrowser(o){
+  const itensHtml=(o.itens||[]).map(i=>`<div class="row"><span>${i.qty}x ${i.name}</span><span>R$${(i.price*i.qty).toFixed(2)}</span></div>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Courier New',monospace;font-size:12px;width:80mm;padding:4mm}
+    @media print{body{width:80mm}}
+    .c{text-align:center}.b{font-weight:bold}
+    hr{border:none;border-top:1px dashed #000;margin:4px 0}
+    .row{display:flex;justify-content:space-between}
+  </style></head><body>
+  <div class="c b" style="font-size:15px">LA CASA DA PIZZA</div>
+  <div class="c">PEDIDO #${o.numero}</div>
+  <div class="c" style="font-size:10px">${(o.data||'').split('-').reverse().join('/')} ${o.hora}</div>
+  <hr><div><b>End:</b> ${o.endereco}</div><div><b>Bairro:</b> ${o.bairro}</div>
+  <hr><div class="b">ITENS:</div>${itensHtml}<hr>
+  <div class="row"><span>Subtotal</span><span>R$${Number(o.subtotal||0).toFixed(2)}</span></div>
+  <div class="row"><span>Taxa entrega</span><span>R$${Number(o.taxa||0).toFixed(2)}</span></div>
+  <hr><div class="row b" style="font-size:14px"><span>TOTAL</span><span>R$${Number(o.total||0).toFixed(2)}</span></div>
+  <hr><div><b>Pagamento:</b> ${o.pagamento||''}</div>
+  ${o.troco?`<div><b>Troco para:</b> ${o.troco}</div>`:''}
+  ${o.obs?`<div><b>Obs:</b> ${o.obs}</div>`:''}
+  <hr><div class="c" style="font-size:10px">Obrigado pela preferencia!</div>
+  <br><br></body></html>`;
+  const fr=document.getElementById('print-frame');
+  const doc=fr.contentDocument||fr.contentWindow.document;
+  doc.open();doc.write(html);doc.close();
+  setTimeout(()=>{fr.contentWindow.focus();fr.contentWindow.print();},400);
+}
+
+async function handlePrint(o){
+  if(btChar) await imprimirBT(o);
+  else printBrowser(o);
+}
+
+// ═══════════════════════════════════════════════
+//  BLUETOOTH PANEL HTML
+// ═══════════════════════════════════════════════
+function renderBTPanel(){
+  return `
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">IMPRESSORA BLUETOOTH</div>
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <button id="btn-bt-connect"    class="btn btn-blue"  onclick="conectarBT()">Conectar Impressora</button>
+      <button id="btn-bt-disconnect" class="btn btn-dark"  onclick="desconectarBT()" style="display:none;color:#e74c3c">Desconectar</button>
+      <button id="btn-bt-test"       class="btn btn-dark"  onclick="testePrint()">Imprimir Teste</button>
+    </div>
+    <div id="bt-status-msg" class="bt-status" style="display:none"></div>
+    <div style="font-size:11px;color:#444;margin-top:8px">
+      Chrome no Windows/Android · Impressora pareada via Bluetooth do sistema
+    </div>
+  </div>`;
+}
+
+const PEDIDO_TESTE={numero:'9999',data:todayISO(),hora:'12:00',endereco:'Rua Teste, 123',bairro:'Centro',itens:[{qty:1,name:'Pizza Calabresa G',price:48}],subtotal:48,taxa:5,total:53,pagamento:'PIX',troco:'',obs:''};
+function testePrint(){ handlePrint(PEDIDO_TESTE); }
+
+// ═══════════════════════════════════════════════
+//  PEDIDOS TAB
+// ═══════════════════════════════════════════════
+let filtro='hoje';
+const SC={novo:'#e67e22',preparando:'#3498db',entregue:'#27ae60',cancelado:'#e74c3c'};
+const SL={novo:'Novo',preparando:'Preparando',entregue:'Entregue',cancelado:'Cancelado'};
+
+function renderPedidos(){
+  const list = filtro==='hoje'
+    ? ORDERS.filter(o=>o.data===todayISO())
+    : ORDERS;
+
+  const sorted=[...list].sort((a,b)=>b.id-a.id);
+
+  let html=renderBTPanel();
+  html+=`<div class="flex-between" style="margin-bottom:12px">
+    <h2 style="font-size:17px;color:var(--red)">Pedidos</h2>
+    <select onchange="filtro=this.value;render()" style="width:auto;padding:7px 10px;font-size:12px">
+      <option value="hoje" ${filtro==='hoje'?'selected':''}>Hoje</option>
+      <option value="todos" ${filtro==='todos'?'selected':''}>Todos</option>
+    </select>
+  </div>`;
+
+  if(!sorted.length){
+    html+=`<div style="text-align:center;color:#555;padding:40px 0;font-size:14px">
+      Nenhum pedido encontrado.<br>
+      <span style="font-size:12px;color:#444;display:block;margin-top:8px">Os pedidos aparecem aqui automaticamente.</span>
+    </div>`;
+  } else {
+    sorted.forEach(o=>{
+      const itensTxt=(o.itens||[]).map(i=>`${i.qty}x ${i.name}`).join(', ');
+      const dataBR=(o.data||'').split('-').reverse().join('/');
+      html+=`<div class="order-card ${o.status==='novo'?'novo':''}" id="ocard-${o.id}">
+        <div class="flex-between">
+          <div>
+            <span style="font-weight:700;font-size:15px">#${esc(o.numero)}</span>
+            <span style="margin-left:8px;font-size:12px;color:#bbb">${esc(o.bairro)}</span>
+            <div style="font-size:11px;color:#888;margin-top:2px">${esc(o.endereco)} &bull; ${esc(o.hora)} &bull; ${dataBR}</div>
+          </div>
+          <div style="font-weight:700;color:var(--orange);font-size:15px">${fmt(o.total)}</div>
+        </div>
+        <div style="font-size:12px;color:#bbb;margin-top:6px">${esc(itensTxt)}${o.obs?' &bull; '+esc(o.obs):''}</div>
+        <div style="font-size:11px;color:#777;margin-top:3px">${esc(o.pagamento||'')}${o.troco?' &bull; troco p/ '+esc(o.troco):''}</div>
+        <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:5px">
+          ${['novo','preparando','entregue','cancelado'].map(s=>`
+          <button class="chip" onclick="changeStatus(${js(o.id)},'${s}')"
+              style="border-color:${o.status===s?SC[s]:'#333'};background:${o.status===s?SC[s]+'33':'transparent'};color:${o.status===s?SC[s]:'#666'}">
+              ${SL[s]}
+            </button>`).join('')}
+          <button class="btn ${btChar?'btn-blue':'btn-dark'}" onclick="handlePrint(ORDERS.find(x=>String(x.id)===${js(o.id)}))"
+            style="margin-left:auto;padding:5px 12px;font-size:11px">
+            ${btChar?'BT':'Imprimir'}
+          </button>
+        </div>
+      </div>`;
+    });
+  }
+  return html;
+}
+
+async function changeStatus(id,status){
+  const o=ORDERS.find(x=>String(x.id)===String(id));
+  if(!o)return;
+  o.status=status;
+  saveOrders();
+  render();
+  if(db){
+    const {error}=await db.from('orders').update({status}).eq('id',id);
+    if(error){
+      console.error(error);
+      showToast('Erro ao atualizar status no Supabase.');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  NOVO PEDIDO
+// ═══════════════════════════════════════════════
+let novoState={
+  cliente:'',endereco:'',bairroId:'',obs:'',troco:'',
+  pagamento:'dinheiro',itens:[],produtoSel:'',qty:1
+};
+
+function renderNovo(){
+  const s=novoState;
+  const bairroObj=BAIRROS.find(b=>String(b.id)===String(s.bairroId));
+  const taxa=bairroObj?bairroObj.taxa:0;
+  const subtotal=s.itens.reduce((sum,i)=>sum+i.price*i.qty,0);
+  const total=subtotal+taxa;
+
+  let html=`<h2 style="color:var(--red);margin-bottom:14px;font-size:17px">Novo Pedido Manual</h2>`;
+
+  // Cliente
+  html+=`<div class="card">
+    <div class="card-title">CLIENTE</div>
+    <input id="n-cliente" value="${esc(s.cliente)}" placeholder="Nome (opcional)" style="margin-bottom:10px">
+    <input id="n-endereco" value="${esc(s.endereco)}" placeholder="Endereco completo *" style="margin-bottom:10px">
+    <select id="n-bairro">
+      <option value="">Selecione o bairro *</option>
+      ${BAIRROS.map(b=>`<option value="${esc(b.id)}" ${String(s.bairroId)===String(b.id)?'selected':''}>${esc(b.name)} — taxa ${fmt(b.taxa)}</option>`).join('')}
+    </select>
+  </div>`;
+
+  // Itens
+  html+=`<div class="card">
+    <div class="card-title">ITENS</div>
+    <div class="row" style="margin-bottom:10px">
+      <select id="n-produto" style="flex:2">
+        <option value="">Produto...</option>
+        ${PRODUCTS.map(p=>`<option value="${esc(p.id)}" ${String(s.produtoSel)===String(p.id)?'selected':''}>${esc(p.name)} — ${fmt(p.price)}</option>`).join('')}
+      </select>
+      <input id="n-qty" type="number" min="1" value="${s.qty}" style="width:60px;text-align:center">
+      <button class="btn btn-red" onclick="addItemNovo()" style="padding:10px 14px;font-size:18px;flex-shrink:0">+</button>
+    </div>
+    ${s.itens.map(i=>`
+      <div class="item-row">
+        <span>${i.qty}x ${esc(i.name)}</span>
+        <div class="row" style="gap:10px">
+          <span style="color:var(--orange)">${fmt(i.price*i.qty)}</span>
+          <button onclick="removeItemNovo(${js(i.id)})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px">X</button>
+        </div>
+      </div>`).join('')}
+    ${s.itens.length>0?`
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #222">
+      <div class="flex-between" style="font-size:13px;color:#aaa;margin-bottom:4px"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+      <div class="flex-between" style="font-size:13px;color:#aaa;margin-bottom:4px"><span>Taxa</span><span>${fmt(taxa)}</span></div>
+      <div class="flex-between" style="font-size:16px;font-weight:700;color:var(--orange)"><span>TOTAL</span><span>${fmt(total)}</span></div>
+    </div>`:''}
+  </div>`;
+
+  // Pagamento
+  html+=`<div class="card">
+    <div class="card-title">PAGAMENTO</div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      ${['dinheiro','pix','cartao'].map(p=>`
+        <button onclick="setPagamentoNovo('${p}')" style="padding:9px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;
+          border:2px solid ${s.pagamento===p?'var(--red)':'#333'};
+          background:${s.pagamento===p?'#c0392b22':'var(--bg4)'};
+          color:${s.pagamento===p?'var(--red)':'var(--muted)'}">
+          ${p.charAt(0).toUpperCase()+p.slice(1)}
+        </button>`).join('')}
+    </div>
+    ${s.pagamento==='dinheiro'?`<input id="n-troco" value="${esc(s.troco)}" placeholder="Troco para (ex: R$ 100)" style="margin-bottom:10px">`:``}
+    <textarea id="n-obs" placeholder="Observacoes..." rows="2">${esc(s.obs)}</textarea>
+  </div>`;
+
+  html+=`<button class="btn btn-full ${btChar?'btn-blue':'btn-red'}" onclick="salvarNovo()">
+    ${btChar?'SALVAR E IMPRIMIR VIA BLUETOOTH':'SALVAR E IMPRIMIR'}
+  </button>`;
+
+  return html;
+}
+
+function syncNovoState(){
+  const g=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  novoState.cliente    = g('n-cliente');
+  novoState.endereco   = g('n-endereco');
+  novoState.bairroId   = g('n-bairro');
+  novoState.obs        = g('n-obs');
+  novoState.troco      = g('n-troco');
+  novoState.produtoSel = g('n-produto');
+  novoState.qty        = Number(g('n-qty'))||1;
+}
+
+function addItemNovo(){
+  syncNovoState();
+  const pid=novoState.produtoSel;
+  if(!pid) return;
+  const p=PRODUCTS.find(x=>String(x.id)===String(pid));
+  if(!p) return;
+  const qty=novoState.qty||1;
+  const ex=novoState.itens.find(i=>String(i.id)===String(p.id));
+  if(ex) ex.qty+=qty;
+  else novoState.itens.push({...p,qty});
+  novoState.produtoSel='';novoState.qty=1;
+  render();
+}
+
+function removeItemNovo(id){
+  novoState.itens=novoState.itens.filter(i=>String(i.id)!==String(id));
+  render();
+}
+
+function setPagamentoNovo(p){
+  syncNovoState();
+  novoState.pagamento=p;
+  render();
+}
+
+async function salvarNovo(){
+  syncNovoState();
+  const s=novoState;
+  if(!s.endereco||!s.bairroId||s.itens.length===0){
+    alert('Preencha endereco, bairro e ao menos 1 item.');return;
+  }
+  const bairroObj=BAIRROS.find(b=>String(b.id)===String(s.bairroId));
+  const taxa=bairroObj?bairroObj.taxa:0;
+  const subtotal=s.itens.reduce((sum,i)=>sum+i.price*i.qty,0);
+  const order={
+    id:Date.now(),
+    numero:Math.floor(Math.random()*9000)+1000,
+    cliente:s.cliente,endereco:s.endereco,bairro:bairroObj?.name||'',
+    taxa,subtotal,total:subtotal+taxa,itens:s.itens,
+    pagamento:s.pagamento,
+    troco:s.pagamento==='dinheiro'?s.troco:'',
+    obs:s.obs,status:'novo',hora:nowStr(),data:todayISO()
+  };
+  if(db){
+    const {data:created,error}=await db.from('orders').insert({
+      numero:order.numero,
+      cliente:order.cliente||null,
+      endereco:order.endereco,
+      bairro_id:bairroObj?.id||null,
+      bairro:order.bairro,
+      taxa:order.taxa,
+      subtotal:order.subtotal,
+      total:order.total,
+      pagamento:order.pagamento,
+      troco:order.troco||null,
+      obs:order.obs||null,
+      status:order.status,
+      hora:order.hora,
+      data:order.data
+    }).select('*').single();
+    if(error){
+      console.error(error);
+      alert('Erro ao salvar pedido no Supabase. Salvando apenas localmente.');
+      ORDERS.unshift(order);
+      saveOrders();
+    }else{
+      const items=s.itens.map(i=>({
+        order_id:created.id,
+        product_id:String(i.id).length>20?i.id:null,
+        name:i.name,
+        qty:i.qty,
+        price:i.price
+      }));
+      const itemsRes=await db.from('order_items').insert(items).select('*');
+      if(itemsRes.error){
+        console.error(itemsRes.error);
+        alert('Pedido salvo, mas houve erro ao salvar os itens.');
+      }
+      order.id=created.id;
+      order.numero=created.numero;
+      order.itens=itemsRes.data?itemsRes.data.map(i=>({id:i.product_id||i.id,itemId:i.id,name:i.name,qty:Number(i.qty),price:Number(i.price)})):order.itens;
+      ORDERS.unshift(order);
+      saveOrders();
+    }
+  }else{
+    ORDERS.unshift(order);
+    saveOrders();
+  }
+  novoState={cliente:'',endereco:'',bairroId:'',obs:'',troco:'',pagamento:'dinheiro',itens:[],produtoSel:'',qty:1};
+  await handlePrint(order);
+  switchTab('pedidos');
+}
+
+// ═══════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDashboard(){
+  const tod=ORDERS.filter(o=>o.data===todayISO());
+  const fHoje=tod.reduce((s,o)=>s+o.total,0);
+  const fMes=ORDERS.filter(o=>(o.data||'').slice(0,7)===todayISO().slice(0,7)).reduce((s,o)=>s+o.total,0);
+  const entregues=tod.filter(o=>o.status==='entregue').length;
+  const ticket=tod.length?fHoje/tod.length:0;
+
+  const top={};
+  ORDERS.forEach(o=>(o.itens||[]).forEach(i=>{top[i.name]=(top[i.name]||0)+i.qty}));
+  const top5=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // ultimos 7 dias
+  const dias={};
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const k=d.toISOString().slice(0,10);
+    dias[k]=0;
+  }
+  ORDERS.forEach(o=>{if(dias[o.data]!==undefined)dias[o.data]+=o.total;});
+  const diaEntries=Object.entries(dias);
+  const maxVal=Math.max(...diaEntries.map(([,v])=>v),1);
+
+  let html=`<h2 style="color:var(--red);margin-bottom:14px;font-size:17px">Dashboard</h2>`;
+
+  // Stats
+  html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    ${[
+      ['Faturamento Hoje', fmt(fHoje), tod.length+' pedidos','var(--orange)'],
+      ['Faturamento Mes',  fmt(fMes),  todayISO().slice(0,7).split('-').reverse().join('/'),'var(--green)'],
+      ['Ticket Medio',     fmt(ticket),'hoje','var(--blue)'],
+      ['Entregues Hoje',   entregues,  'de '+tod.length,'var(--red)'],
+    ].map(([l,v,s,c])=>`
+      <div class="stat-card" style="border-color:${c}33">
+        <div class="stat-label">${l}</div>
+        <div class="stat-value" style="color:${c}">${v}</div>
+        <div class="stat-sub">${s}</div>
+      </div>`).join('')}
+  </div>`;
+
+  // Grafico simples
+  html+=`<div class="card" style="margin-bottom:14px">
+    <div class="card-title">FATURAMENTO - ULTIMOS 7 DIAS</div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:10px">
+      ${diaEntries.map(([d,v])=>{
+        const h=Math.round((v/maxVal)*70);
+        const label=d.slice(5).split('-').reverse().join('/');
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:9px;color:#666">${v>0?'R$'+Math.round(v):''}</div>
+          <div style="width:100%;background:${v>0?'var(--red)':'#2a2a2a'};height:${Math.max(h,3)}px;border-radius:3px 3px 0 0;transition:.3s"></div>
+          <div style="font-size:9px;color:#555">${label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  // Top produtos
+  html+=`<div class="card">
+    <div class="card-title">MAIS VENDIDOS</div>
+    ${top5.length===0?`<div style="color:#555;font-size:13px">Sem dados ainda</div>`:
+      top5.map(([name,cnt],i)=>`
+        <div class="item-row">
+          <span>${i+1}. ${esc(name)}</span>
+          <span style="color:var(--orange);font-weight:700">${cnt}x</span>
+        </div>`).join('')}
+  </div>`;
+
+  return html;
+}
+
+// ═══════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════
+let configTab='produtos';
+let editPId=null, editBId=null;
+let pNome='',pPreco='',pCat='Pizza';
+let bNome='',bTaxa='';
+
+function renderConfig(){
+  let html=`<h2 style="color:var(--red);margin-bottom:14px;font-size:17px">Configuracoes</h2>`;
+  html+=`<div class="row" style="margin-bottom:14px;gap:8px">
+    <button onclick="configTab='produtos';render()" class="btn ${configTab==='produtos'?'btn-red':'btn-dark'}">Produtos</button>
+    <button onclick="configTab='bairros';render()"  class="btn ${configTab==='bairros'?'btn-red':'btn-dark'}">Bairros</button>
+  </div>`;
+
+  if(configTab==='produtos'){
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div class="card-title">${editPId?'EDITAR':'NOVO'} PRODUTO</div>
+      <div class="grid2" style="margin-bottom:10px">
+        <input id="p-nome"  value="${esc(pNome)}"  placeholder="Nome">
+        <input id="p-preco" value="${esc(pPreco)}" placeholder="Preco R$">
+      </div>
+      <input id="p-cat" value="${esc(pCat)}" placeholder="Categoria" style="margin-bottom:10px">
+      <div class="row">
+        <button class="btn btn-red" style="flex:1" onclick="saveProduct()">${editPId?'Salvar':'Adicionar'}</button>
+        ${editPId?`<button class="btn btn-dark" onclick="editPId=null;pNome='';pPreco='';render()">Cancelar</button>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">CADASTRADOS (${PRODUCTS.length})</div>
+      ${PRODUCTS.map(p=>`
+        <div class="item-row">
+          <span>${esc(p.name)} <span style="font-size:10px;color:#555">(${esc(p.category)})</span></span>
+          <div class="row" style="gap:8px">
+            <span style="color:var(--orange);font-size:12px">${fmt(p.price)}</span>
+            <button onclick="startEditProduct(${js(p.id)})" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px">Editar</button>
+            <button onclick="deleteProduct(${js(p.id)})"   style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">Remover</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if(configTab==='bairros'){
+    html+=`<div class="card" style="margin-bottom:12px">
+      <div class="card-title">${editBId?'EDITAR':'NOVO'} BAIRRO</div>
+      <div class="grid2" style="margin-bottom:10px">
+        <input id="b-nome" value="${esc(bNome)}" placeholder="Nome do bairro">
+        <input id="b-taxa" value="${esc(bTaxa)}" placeholder="Taxa R$">
+      </div>
+      <div class="row">
+        <button class="btn btn-red" style="flex:1" onclick="saveBairro()">${editBId?'Salvar':'Adicionar'}</button>
+        ${editBId?`<button class="btn btn-dark" onclick="editBId=null;bNome='';bTaxa='';render()">Cancelar</button>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">CADASTRADOS (${BAIRROS.length})</div>
+      ${BAIRROS.map(b=>`
+        <div class="item-row">
+          <span>${esc(b.name)}</span>
+          <div class="row" style="gap:8px">
+            <span style="color:var(--orange);font-size:12px">Taxa: ${fmt(b.taxa)}</span>
+            <button onclick="startEditBairro(${js(b.id)})" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px">Editar</button>
+            <button onclick="deleteBairro(${js(b.id)})"   style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">Remover</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Dados
+  html+=`<div class="card" style="margin-top:12px">
+    <div class="card-title">DADOS</div>
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-dark" onclick="exportData()" style="font-size:12px">Exportar Backup</button>
+      <button class="btn btn-dark" onclick="document.getElementById('import-file').click()" style="font-size:12px">Importar Backup</button>
+      <button class="btn btn-dark" onclick="clearOld()" style="font-size:12px;color:#e74c3c">Limpar Antigos</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    <div style="font-size:11px;color:#444;margin-top:8px">Total de pedidos: ${ORDERS.length}</div>
+  </div>`;
+
+  return html;
+}
+
+function syncProductForm(){
+  pNome  = (document.getElementById('p-nome') ||{value:pNome}).value;
+  pPreco = (document.getElementById('p-preco')||{value:pPreco}).value;
+  pCat   = (document.getElementById('p-cat')  ||{value:pCat}).value;
+}
+function syncBairroForm(){
+  bNome = (document.getElementById('b-nome')||{value:bNome}).value;
+  bTaxa = (document.getElementById('b-taxa')||{value:bTaxa}).value;
+}
+
+async function saveProduct(){
+  syncProductForm();
+  if(!pNome||!pPreco) return;
+  const p={id:editPId||Date.now(),name:pNome,price:parseFloat(pPreco.replace(',','.')),category:pCat||'Pizza'};
+  if(db){
+    if(editPId){
+      const {data,error}=await db.from('products').update({
+        name:p.name,price:p.price,category:p.category
+      }).eq('id',editPId).select('*').single();
+      if(error){console.error(error);showToast('Erro ao salvar produto.');return;}
+      PRODUCTS=PRODUCTS.map(x=>String(x.id)===String(editPId)?{...data,price:Number(data.price||0)}:x);
+    }else{
+      const {data,error}=await db.from('products').insert({
+        name:p.name,price:p.price,category:p.category
+      }).select('*').single();
+      if(error){console.error(error);showToast('Erro ao adicionar produto.');return;}
+      PRODUCTS.push({...data,price:Number(data.price||0)});
+    }
+  }else if(editPId) PRODUCTS=PRODUCTS.map(x=>String(x.id)===String(editPId)?p:x);
+  else PRODUCTS.push(p);
+  saveProducts();
+  editPId=null;pNome='';pPreco='';pCat='Pizza';
+  render();
+}
+function startEditProduct(id){
+  const p=PRODUCTS.find(x=>String(x.id)===String(id));
+  if(!p)return;
+  editPId=p.id;pNome=p.name;pPreco=String(p.price);pCat=p.category;
+  render();window.scrollTo(0,0);
+}
+async function deleteProduct(id){
+  if(!confirm('Remover produto?'))return;
+  if(db){
+    const {error}=await db.from('products').update({active:false}).eq('id',id);
+    if(error){console.error(error);showToast('Erro ao remover produto.');return;}
+  }
+  PRODUCTS=PRODUCTS.filter(x=>String(x.id)!==String(id));saveProducts();render();
+}
+
+async function saveBairro(){
+  syncBairroForm();
+  if(!bNome||bTaxa==='')return;
+  const b={id:editBId||Date.now(),name:bNome,taxa:parseFloat(bTaxa.replace(',','.'))};
+  if(db){
+    if(editBId){
+      const {data,error}=await db.from('bairros').update({
+        name:b.name,taxa:b.taxa
+      }).eq('id',editBId).select('*').single();
+      if(error){console.error(error);showToast('Erro ao salvar bairro.');return;}
+      BAIRROS=BAIRROS.map(x=>String(x.id)===String(editBId)?{...data,taxa:Number(data.taxa||0)}:x);
+    }else{
+      const {data,error}=await db.from('bairros').insert({
+        name:b.name,taxa:b.taxa
+      }).select('*').single();
+      if(error){console.error(error);showToast('Erro ao adicionar bairro.');return;}
+      BAIRROS.push({...data,taxa:Number(data.taxa||0)});
+    }
+  }else if(editBId) BAIRROS=BAIRROS.map(x=>String(x.id)===String(editBId)?b:x);
+  else BAIRROS.push(b);
+  saveBairros();
+  editBId=null;bNome='';bTaxa='';
+  render();
+}
+function startEditBairro(id){
+  const b=BAIRROS.find(x=>String(x.id)===String(id));
+  if(!b)return;
+  editBId=b.id;bNome=b.name;bTaxa=String(b.taxa);
+  render();window.scrollTo(0,0);
+}
+async function deleteBairro(id){
+  if(!confirm('Remover bairro?'))return;
+  if(db){
+    const {error}=await db.from('bairros').update({active:false}).eq('id',id);
+    if(error){console.error(error);showToast('Erro ao remover bairro.');return;}
+  }
+  BAIRROS=BAIRROS.filter(x=>String(x.id)!==String(id));saveBairros();render();
+}
+
+function exportData(){
+  const data=JSON.stringify({orders:ORDERS,products:PRODUCTS,bairros:BAIRROS},null,2);
+  const a=document.createElement('a');
+  a.href='data:application/json,'+encodeURIComponent(data);
+  a.download='lcdp-backup-'+todayISO()+'.json';
+  a.click();
+}
+async function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(db){
+        if(d.products?.length){
+          const products=d.products.map(p=>({name:p.name,price:Number(p.price||0),category:p.category||'Pizza',active:true}));
+          const {error}=await db.from('products').upsert(products,{onConflict:'name'});
+          if(error) throw error;
+        }
+        if(d.bairros?.length){
+          const bairros=d.bairros.map(b=>({name:b.name,taxa:Number(b.taxa||0),active:true}));
+          const {error}=await db.from('bairros').upsert(bairros,{onConflict:'name'});
+          if(error) throw error;
+        }
+        await loadSupabaseData();
+      }else{
+        if(d.orders)  {ORDERS=d.orders;   saveOrders();}
+        if(d.products){PRODUCTS=d.products;saveProducts();}
+        if(d.bairros) {BAIRROS=d.bairros; saveBairros();}
+      }
+      alert('Backup importado com sucesso!');render();
+    }catch{alert('Arquivo invalido.');}
+  };
+  r.readAsText(f);
+}
+async function clearOld(){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
+  const c=cutoff.toISOString().slice(0,10);
+  if(!confirm('Remover pedidos com mais de 30 dias?'))return;
+  if(db){
+    const {error}=await db.from('orders').delete().lt('data',c);
+    if(error){console.error(error);showToast('Erro ao limpar pedidos antigos.');return;}
+  }
+  ORDERS=ORDERS.filter(o=>o.data>=c);
+  saveOrders();render();
+}
+
+// ═══════════════════════════════════════════════
+//  BIND EVENTS (campos que precisam de sync ao digitar)
+// ═══════════════════════════════════════════════
+function bindEvents(){
+  // Novo pedido — sync ao digitar para nao perder ao re-render
+  const bind=(id,key)=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('input',e=>{novoState[key]=e.target.value;});
+  };
+  bind('n-cliente','cliente');
+  bind('n-endereco','endereco');
+  bind('n-bairro','bairroId');
+  bind('n-obs','obs');
+  bind('n-troco','troco');
+  bind('n-qty','qty');
+  bind('n-produto','produtoSel');
+}
+
+// ═══════════════════════════════════════════════
+//  POLLING — detecta novos pedidos de outra aba
+// ═══════════════════════════════════════════════
+setInterval(()=>{
+  if(db)return;
+  try{
+    const raw=localStorage.getItem(SK_ORDERS);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(parsed.length>prevOrderCount){
+      ORDERS=parsed;prevOrderCount=parsed.length;
+      showToast('NOVO PEDIDO CHEGOU!');
+      playAlert();
+      if(currentTab==='pedidos')render();
+      else updateHeader();
+    }
+  }catch(e){}
+},3000);
+
+window.addEventListener('storage',e=>{
+  if(db)return;
+  if(e.key!==SK_ORDERS||!e.newValue)return;
+  try{
+    const parsed=JSON.parse(e.newValue);
+    if(parsed.length>prevOrderCount){
+      ORDERS=parsed;prevOrderCount=parsed.length;
+      showToast('NOVO PEDIDO CHEGOU!');
+      playAlert();
+      if(currentTab==='pedidos')render();
+      else updateHeader();
+    }
+  }catch(e){}
+});
+
+function subscribeSupabaseRealtime(){
+  if(!db||!authUser||realtimeChannel)return;
+  realtimeChannel=db.channel('lcdp-orders')
+    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},()=>refreshOrdersFromSupabase(true))
+    .on('postgres_changes',{event:'*',schema:'public',table:'order_items'},()=>refreshOrdersFromSupabase(false))
+    .subscribe();
+}
+
+// ═══════════════════════════════════════════════
+//  PWA — INSTALL
+// ═══════════════════════════════════════════════
+let deferredPrompt=null;
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  const banner=document.getElementById('install-banner');
+  banner.classList.add('visible');
+});
+
+document.getElementById('btn-install').addEventListener('click',async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const {outcome}=await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-banner').classList.remove('visible');
+});
+
+document.getElementById('btn-install-close').addEventListener('click',()=>{
+  document.getElementById('install-banner').classList.remove('visible');
+});
+
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('install-banner').classList.remove('visible');
+  showToast('App instalado com sucesso!');
+});
+
+// ═══════════════════════════════════════════════
+//  SERVICE WORKER
+// ═══════════════════════════════════════════════
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+async function init(){
+  if(!db){
+    setAuthUI(false);
+    setLoginError('Configure SUPABASE_URL e SUPABASE_ANON_KEY para usar online.');
+    return;
+  }
+  const {data}=await db.auth.getSession();
+  authUser=data.session?.user||null;
+  if(authUser) await startAdmin();
+  else setAuthUI(false);
+}
+
+async function startAdmin(){
+  setAuthUI(true);
+  await loadSupabaseData();
+  subscribeSupabaseRealtime();
+  render();
+}
+init();
+</script>
+</body>
+</html>
