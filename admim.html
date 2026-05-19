@@ -1015,7 +1015,7 @@ function contentClickHandler(e){
 //  POLLING
 // ═══════════════════════════════════════════════
 setInterval(()=>{
-  if(db)return;
+  if(db&&authUser)return;
   try{
     const raw=localStorage.getItem(SK_ORDERS);if(!raw)return;
     const parsed=JSON.parse(raw);
@@ -1028,7 +1028,7 @@ setInterval(()=>{
 },3000);
 
 window.addEventListener('storage',e=>{
-  if(db)return;if(e.key!==SK_ORDERS||!e.newValue)return;
+  if(db&&authUser)return;if(e.key!==SK_ORDERS||!e.newValue)return;
   try{
     const parsed=JSON.parse(e.newValue);
     if(parsed.length>prevOrderCount){
