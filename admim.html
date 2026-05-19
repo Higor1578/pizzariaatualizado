@@ -270,7 +270,7 @@ function switchTab(name){
   render();
 }
 function render(){
-  if(db&&!authUser)return;
+  
   updateHeader();
   const c=document.getElementById('content');
   if(currentTab==='pedidos')   c.innerHTML=renderPedidos();
@@ -1005,14 +1005,22 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catc
 //  INIT
 // ═══════════════════════════════════════════════
 async function init(){
+  // Sem Supabase → entra direto no painel sem login
   if(!db){
-    setAuthUI(false);
-    setLoginError('Configure SUPABASE_URL e SUPABASE_ANON_KEY para usar online.');
+    setAuthUI(true);
+    render();
     return;
   }
+  // Com Supabase → verifica sessão
   const {data}=await db.auth.getSession();
   authUser=data.session?.user||null;
-  if(authUser)await startAdmin();else setAuthUI(false);
+  if(authUser){
+    await startAdmin();
+  } else {
+    // Sem sessão → entra direto usando dados locais
+    setAuthUI(true);
+    render();
+  }
 }
 async function startAdmin(){
   setAuthUI(true);
